@@ -1,0 +1,48 @@
+In Master and Slave instances we need to perform its common in all.
+====================================================================
+ 1. apt update -y
+ 2. apt-get install -y apt-transport-https
+ 3. apt-get install docker.io -y
+ 4. systemctl start docker
+ 5. systemctl enable docker
+ 6. apt-get install curl -y
+ 7. curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
+ 8. curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo tee /etc/apt/trusted.gpg.d/kubernetes-archive-keyring.gpg > /dev/null
+ 9. chmod 777 /etc/apt/sources.list.d/
+ 10.vim /etc/apt/sources.list.d/kubernetes.list
+
+	deb https://apt.kubernetes.io/ kubernetes-xenial main
+
+ 11.cat /etc/apt/sources.list.d/kubernetes.list
+ 12.echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+ 13.curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+ 14.sudo apt-get update -y
+ 15.apt-get install -y kubelet kubeadm kubectl
+ 16.swapoff -a
+
+After above commands 
+In Master node
+=================
+1. sudo kubeadm init
+2. mkdir -p $HOME/.kube
+   sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+   sudo chown $(id -u):$(id -g) $HOME/.kube/config
+   export KUBECONFIG=/etc/kubernetes/admin.conf
+3. kubeclt get nodes --> to check Master ready or not( Unready )
+4. systemctl daemon-reload
+5. systemctl start kubelet
+6. systemctl enable kubelet.service
+7. kubectl version --client
+kubectl get nodes
+kubectl apply -f https://github.com/rajch/weave/releases/latest/download/weave-daemonset-k8s-1.11.yaml
+kubectl get pods -A --> Check all plugins are running state
+kubectl get nodes --> To check Master is ready or not (Ready)
+
+To add Workernodes to cluster:
+==============================
+after performing common commands mentioned above
+
+1. kubeadm token create --print-join-command --> perform this in master node to get the token  to add the node to cluster
+2.Paste the tojen we received and paste it in worker node
+eg: kubeadm join 172.31.94.183:6443 --token ii41iy.dzuo8wbdlmndq8yq --discovery-token-ca-cert-hash sha256:62cba032c6158b1bd53339327b249c403ef25cf947b13b1a1f8811a1c02f5fb6
+3. kubectl get nodes --> perform this in Masternode to check Worker node is ready or not (Ready) 
