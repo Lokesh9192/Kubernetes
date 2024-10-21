@@ -19,6 +19,13 @@ spec:
         image: salapalalokesh/springboot-mongo:latest
         ports:
         - containerPort: 8080
+        resources:
+            requests:
+              cpu: "500m"
+              memory: "256Mi"
+            limits:
+              cpu: 1
+              memory: "512Mi"
         env:
         - name: MONGO_DB_HOSTNAME
           value: mongosvc
