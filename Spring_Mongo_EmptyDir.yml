@@ -1,4 +1,4 @@
-
+  
 apiVersion: apps/v1 # Spring app Deployment
 kind: Deployment
 metadata:
@@ -81,12 +81,12 @@ spec:
         - name: MONGO_INITDB_ROOT_PASSWORD
           value: devdb@123
         volumeMounts:
-        - name: mongodb
-          mountPath: "/data/db"
+        - mountPath: /mongodata
+          name: mongodb
       volumes:
       - name: mongodb
-        hostPath:
-          path: /root/mongodata
+        emptyDir:
+          sizeLimit: 500Mi
 ---
 #Mongo DB Service
 
