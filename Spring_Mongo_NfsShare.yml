@@ -1,0 +1,117 @@
+# Create an EC2 insance for NFS server 
+# sudo apt-get update -y
+# sudo apt install nfs-kernel-server
+# sudo mkdir -p /mnt/nfs_share
+# sudo chown -R nobody:nogroup /mnt/nfs_share
+# sudo chmod -R 777 /mnt/mnt_share
+# sudo chmod -R 777 /mnt/nfs_share
+# sudo vim /etc/exports
+#   /mnt/nfs_share 172.31.0.0/16(rw,sync,no_subtree_check,no_root_squash) --> the ip is VPC of NFS server
+# sudo exportfs -a
+# sudo systemctl restart nfs-kernel-server
+# sudo apt install nfs-common -y --> Paste this command in all the instances inside the cluster
+apiVersion: apps/v1 # Spring app Deployment
+kind: Deployment
+metadata:
+  name: springapp
+  namespace: k8-ns
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: springapp
+  template:
+    metadata:
+      name: springapp
+      labels:
+        app: springapp
+    spec:
+      containers:
+      - name: springapp
+        image: salapalalokesh/springboot-mongo:latest
+        ports:
+        - containerPort: 8080
+        resources:
+            requests:
+              cpu: "500m"
+              memory: "256Mi"
+            limits:
+              cpu: 1
+              memory: "512Mi"
+        env:
+        - name: MONGO_DB_HOSTNAME
+          value: mongosvc
+        - name: MONGO_DB_USERNAME
+          value: devdb
+        - name: MONGO_DB_PASSWORD
+          value: devdb@123
+---
+#Spring App Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: springappsvc
+  labels:
+    app: springapp
+  namespace: k8-ns
+spec:
+  type: NodePort
+  selector:
+    app: springapp
+  ports:
+  - port: 80
+  targetPort: 8080
+  nodePort: 30010
+---
+#Mongo DB ReplicationSet
+
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: mongodb
+  namespace: k8-ns
+spec:
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      name: mongodb
+      labels:
+        app: mongodb
+    spec:
+
+      containers:
+      - name: mongodb
+        image: mongo
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: devdb
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: devdb@123
+        volumeMounts:
+        - name: mongovol
+          mountPath: "/data/db"
+      volumes:
+      - name: mongovol
+        nfs:
+          server: 172.31.37.80 # Nfs private ip if  K8's cluster and NFS server are in same VPC, if not provide public ip of NFS server
+          path: /mnt/nfs_share
+---
+#Mongo DB Service
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongosvc
+  labels:
+    app: mongodb
+  namespace: k8-ns
+spec:
+  selector:
+    app: mongodb
+  ports:
+  - port: 27017
+    targetPort: 27017
