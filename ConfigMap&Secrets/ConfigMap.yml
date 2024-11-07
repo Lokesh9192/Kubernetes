@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: springappconfig
+  namespace: k8-ns
+data:
+  dbusername: devdb
