@@ -19,6 +19,14 @@ spec:
     spec:
       affinity:
         podAffinity:
+          #preferredDuringSchedulingIgnoredDuringExecution:
+          #- weight: 1
+          #  preference:
+          #- key: name
+          #      operator: In
+          #     values:
+          #     - nginx
+            topologyKey: "kubernetes.io/hostname"
           requiredDuringSchedulingIgnoredDuringExecution:
           - labelSelector:
               matchExpressions:
