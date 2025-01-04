@@ -1,0 +1,67 @@
+pipeline{
+    agent any
+    tools{
+        jdk 'jdk11'
+        maven 'maven3'
+    }
+    stages{
+        stage('Checkout scm'){
+            steps{
+                checkout scmGit(branches: [[name: '*/master']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/Aj7Ay/amazon-eks-jenkins-terraform-aj7.git']])
+            }
+        }
+        stage('Maven compile'){
+            steps{
+                sh 'mvn clean compile'
+            }
+        }
+        stage('sonarqube Analysis'){
+            steps{
+                script{
+                    withSonarQubeEnv(credentialsId: 'Sonar-token') {
+                        sh 'mvn sonar:sonar'
+                        }
+                    }
+            }
+        }
+        stage('Quality gate'){
+            steps{
+                script{
+                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token' 
+                    }
+            }
+        }
+        stage("OWASP Dependency Check"){
+            steps{
+                dependencyCheck additionalArguments: '--scan ./ --format HTML ', odcInstallation: 'DP-Check'
+                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+            }
+        }
+        stage("Build war file"){
+            steps{
+                sh " mvn clean install package"
+            }
+        }
+        stage("Build and push to docker hub"){
+            steps{
+                script{
+                    withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
+                        sh "docker build -t petclinic1 ."
+                        sh "docker tag petclinic1 salapalalokesh/pet-clinic123:latest"
+                        sh "docker push salapalalokesh/pet-clinic123:latest"
+                    }
+                }
+            }
+        }
+        stage("Trivy"){
+            steps{
+                sh "trivy image salapalalokesh/pet-clinic123:latest"
+            }
+        }
+        stage("Deploy to container"){
+            steps{
+                sh "docker run -d --name pet1 -p 8082:8080 salapalalokesh/pet-clinic123:latest"
+            }
+        }
+    }
+}
